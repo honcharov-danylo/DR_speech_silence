@@ -52,10 +52,10 @@ class api_wrapper:
             })
         response = service_request.execute()
         print(json.dumps(response))
-
+        return json.dumps(response)
 
 if(__name__=="__main__"):
-    file="/data/short.mp3"
+    file="../data/short.mp3"
     aw=api_wrapper()
     #subprocess.run(["rm",'/tmp/audio.wav'])
     subprocess.call(['sox', file, '/tmp/audio_stereo.wav'])
