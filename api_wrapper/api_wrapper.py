@@ -1,6 +1,7 @@
-import argparse
+import subprocess
 import base64
 import json
+import os
 
 from googleapiclient import discovery
 import httplib2
@@ -9,5 +10,54 @@ from oauth2client.client import GoogleCredentials
 
 class api_wrapper:
     def __init__(self):
+        #Looks like something terrible. Not use this in production. Ever. EVER!
+        #print(os.getenv("PWD"))
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=os.getenv("PWD")+"/"+"speech-recognition-7284f98b659f.json"
         pass
 
+
+    #taken from official documentation
+    def get_speech_service(self):
+        DISCOVERY_URL = ('https://{api}.googleapis.com/$discovery/rest?'
+                         'version={apiVersion}')
+        credentials = GoogleCredentials.get_application_default().create_scoped(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+        http = httplib2.Http()
+        credentials.authorize(http)
+
+        return discovery.build(
+            'speech', 'v1beta1', http=http, discoveryServiceUrl=DISCOVERY_URL)
+
+    def send_file(self,speech_file):
+        """Transcribe the given audio file.
+
+        Args:
+            speech_file: the name of the audio file.
+        """
+        with open(speech_file, 'rb') as speech:
+            speech_content = base64.b64encode(speech.read())
+
+        service = self.get_speech_service()
+        service_request = service.speech().syncrecognize(
+            body={
+                'config': {
+                    'encoding': 'LINEAR16',  # raw 16-bit signed LE samples
+                    'sampleRate': 44100, #44.1 khz. weird,lol
+                    #'sampleRate': 16000,  # 16 khz
+                    'languageCode': 'en-US',  # a BCP-47 language tag
+                },
+                'audio': {
+                    'content': speech_content.decode('UTF-8')
+                }
+            })
+        response = service_request.execute()
+        print(json.dumps(response))
+
+
+if(__name__=="__main__"):
+    file="/data/short.mp3"
+    aw=api_wrapper()
+    #subprocess.run(["rm",'/tmp/audio.wav'])
+    subprocess.call(['sox', file, '/tmp/audio_stereo.wav'])
+    subprocess.call(['sox','/tmp/audio_stereo.wav','/tmp/audio.wav','remix','1']) #make mono
+    aw.send_file('/tmp/audio.wav')
