@@ -2,6 +2,7 @@ import subprocess
 import base64
 import json
 import os
+import sox
 
 from googleapiclient import discovery
 import httplib2
@@ -58,6 +59,9 @@ if(__name__=="__main__"):
     file="../data/short.mp3"
     aw=api_wrapper()
     #subprocess.run(["rm",'/tmp/audio.wav'])
-    subprocess.call(['sox', file, '/tmp/audio_stereo.wav'])
-    subprocess.call(['sox','/tmp/audio_stereo.wav','/tmp/audio.wav','remix','1']) #make mono
-    aw.send_file('/tmp/audio.wav')
+    #subprocess.call(['sox', file, '/tmp/audio_stereo.wav'])
+    #subprocess.call(['sox','/tmp/audio_stereo.wav','/tmp/audio.wav','remix','1']) #make mono
+    tfm = sox.Transformer()
+    tfm.remix(num_output_channels=1)
+    tfm.build(file,'../temp/audio.wav')
+    aw.send_file('../temp/audio.wav')
