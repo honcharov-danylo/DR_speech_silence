@@ -1,8 +1,9 @@
-import subprocess
+#import subprocess
 import base64
 import json
 import os
 import sox
+
 
 from googleapiclient import discovery
 import httplib2
@@ -12,9 +13,7 @@ from oauth2client.client import GoogleCredentials
 class api_wrapper:
     def __init__(self):
         #Looks like something terrible. Not use this in production. Ever. EVER!
-        #print(os.getenv("PWD"))
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=os.getenv("PWD")+"/"+"speech-recognition-7284f98b659f.json"
-        pass
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=os.getcwd()+os.sep+"api_wrapper"+os.sep+"speech-recognition-7284f98b659f.json"
 
 
     #taken from official documentation
@@ -29,12 +28,18 @@ class api_wrapper:
         return discovery.build(
             'speech', 'v1beta1', http=http, discoveryServiceUrl=DISCOVERY_URL)
 
+
     def send_file(self,speech_file):
         """Transcribe the given audio file.
 
         Args:
             speech_file: the name of the audio file.
         """
+        tfm = sox.Transformer()
+        tfm.remix(num_output_channels=1)
+        tfm.build(speech_file, "temp"+os.sep+"result.wav")
+        speech_file="temp"+os.sep+"result.wav"
+        rate=sox.file_info.sample_rate(speech_file)
         with open(speech_file, 'rb') as speech:
             speech_content = base64.b64encode(speech.read())
 
@@ -43,7 +48,7 @@ class api_wrapper:
             body={
                 'config': {
                     'encoding': 'LINEAR16',  # raw 16-bit signed LE samples
-                    'sampleRate': 44100, #44.1 khz. weird,lol
+                    'sampleRate': rate,
                     #'sampleRate': 16000,  # 16 khz
                     'languageCode': 'en-US',  # a BCP-47 language tag
                 },
