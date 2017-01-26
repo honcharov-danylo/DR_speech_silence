@@ -1,4 +1,3 @@
-#import subprocess
 import base64
 import json
 import os
@@ -29,43 +28,50 @@ class api_wrapper:
             'speech', 'v1beta1', http=http, discoveryServiceUrl=DISCOVERY_URL)
 
 
-    def send_file(self,speech_file):
+    def send_file(self,speech_file,languageCode= 'en-US'):
         """Transcribe the given audio file.
 
         Args:
-            speech_file: the name of the audio file.
+            speech_content: the name of the audio file.
         """
+        languageCode='ru-RU'
         tfm = sox.Transformer()
         tfm.remix(num_output_channels=1)
         tfm.build(speech_file, "temp"+os.sep+"result.wav")
         speech_file="temp"+os.sep+"result.wav"
         rate=sox.file_info.sample_rate(speech_file)
         with open(speech_file, 'rb') as speech:
-            speech_content = base64.b64encode(speech.read())
+           speech_content = speech.read()
+        return self.send_data(speech_content,rate,languageCode)
 
+    def send_data(self,speech_content,rate,languageCode= 'en-US'):
+        """Transcribe the given audio data.
+
+        Args:
+            speech_content: audio data.
+        """
+        speech_content=base64.b64encode(speech_content)
         service = self.get_speech_service()
         service_request = service.speech().syncrecognize(
             body={
                 'config': {
                     'encoding': 'LINEAR16',  # raw 16-bit signed LE samples
                     'sampleRate': rate,
-                    #'sampleRate': 16000,  # 16 khz
-                    'languageCode': 'en-US',  # a BCP-47 language tag
+                    'languageCode': languageCode,  # a BCP-47 language tag
                 },
                 'audio': {
                     'content': speech_content.decode('UTF-8')
                 }
             })
         response = service_request.execute()
-        print(json.dumps(response))
-        return json.dumps(response)
+        return response
+        #print(response['results'])
+        #print(json.dumps(response))
+        #return json.dumps(response)
 
 if(__name__=="__main__"):
     file="../data/short.mp3"
     aw=api_wrapper()
-    #subprocess.run(["rm",'/tmp/audio.wav'])
-    #subprocess.call(['sox', file, '/tmp/audio_stereo.wav'])
-    #subprocess.call(['sox','/tmp/audio_stereo.wav','/tmp/audio.wav','remix','1']) #make mono
     tfm = sox.Transformer()
     tfm.remix(num_output_channels=1)
     tfm.build(file,'../temp/audio.wav')
