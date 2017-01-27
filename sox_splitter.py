@@ -59,10 +59,11 @@ class sox_splitter:
         print(points)
         return points
 
-    def send_to_google_api(self,filename):
+    def send_to_google_api(self,filename,langCode="en_US"):
         """
         Send to google api using api_wrapper
         :param filename: name of input file
+        :param languageCode: a BCP-47 language tag
         :return: list of recognized strings
         """
         files = self.split_file_by_silence(filename)
@@ -70,7 +71,8 @@ class sox_splitter:
         aw = api_wrapper.api_wrapper.api_wrapper()
         result=[]
         for file in files:
-            res = aw.send_file(file)
+            res = aw.send_file(file,languageCode=langCode)
+            #print(res)
             regexp = re.findall(r"\":\s*\"[^\"]*", json.dumps(res))
             for line in regexp:
                 line=bytes(line, "utf-8").decode("unicode_escape")

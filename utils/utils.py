@@ -1,4 +1,5 @@
 import sox
+import scipy.io.wavfile as wavfile
 
 
 #Awful code, all of it
@@ -20,3 +21,9 @@ def save_to_file(filename,content):
         f.write(line)
         f.write("\r\n")
     f.close()
+
+def get_beginning_of_file(old_filename,new_filename,duration):
+    rate,wave_data=wavfile.read(old_filename)
+    wavfile.write(new_filename,rate,wave_data[:duration*rate])
+
+

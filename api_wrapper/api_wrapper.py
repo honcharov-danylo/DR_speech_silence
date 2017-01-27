@@ -34,7 +34,7 @@ class api_wrapper:
         Args:
             speech_content: the name of the audio file.
         """
-        languageCode='ru-RU'
+        #languageCode='ru-RU'
         tfm = sox.Transformer()
         tfm.remix(num_output_channels=1)
         tfm.build(speech_file, "temp"+os.sep+"result.wav")
@@ -56,7 +56,7 @@ class api_wrapper:
             body={
                 'config': {
                     'encoding': 'LINEAR16',  # raw 16-bit signed LE samples
-                    'sampleRate': rate,
+                    'sampleRate': 32000,
                     'languageCode': languageCode,  # a BCP-47 language tag
                 },
                 'audio': {
