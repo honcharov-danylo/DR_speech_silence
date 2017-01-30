@@ -1,6 +1,8 @@
 import sox
 import scipy.io.wavfile as wavfile
-
+import librosa
+import numpy as np
+import matplotlib.pyplot as plt
 
 #Awful code, all of it
 def mp3towav(filename,outputname):
@@ -26,4 +28,22 @@ def get_beginning_of_file(old_filename,new_filename,duration):
     rate,wave_data=wavfile.read(old_filename)
     wavfile.write(new_filename,rate,wave_data[:duration*rate])
 
+def load_with_changed_bitrate(filename,changed):
+    wave_data,rate=librosa.load(filename,sr=changed)
 
+    #byte_data=np.frombuffer(wave_data.astype(np.float16),dtype=np.byte)
+
+    # timeArray = np.arange(0, wave_data.shape[0], 1)
+    # timeArray = (timeArray / rate) * 1000
+    # plt.plot(timeArray, wave_data)
+    # timeArray = np.arange(0, byte_data.shape[0], 1)
+    # timeArray = (timeArray / rate) * 1000
+    # plt.plot(timeArray, byte_data)
+    # plt.show()
+    #wave_data=np.array(wave_data)
+    #wavfile.write("test_changed_bitrate.wav",rate,wave_data)
+    librosa.output.write_wav("test_changed_bitrate.wav",wave_data,sr=changed)
+    return rate,wave_data
+
+if(__name__=="__main__"):
+    load_with_changed_bitrate("../beginning_out_test.wav",32000)

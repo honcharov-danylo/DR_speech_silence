@@ -12,6 +12,7 @@ import utils.utils
 import numpy as np
 import copy
 from matplotlib.pyplot import cm
+import pandas as pd
 
 import webrtcvad
 
@@ -92,6 +93,14 @@ class webercvad:
             wf.setframerate(sample_rate)
             wf.writeframes(audio)
 
+    def parse_audio_from_file(self,agression,path,frame_duration_ms=30, padding_duration_ms=300):
+        self.current_filename=path
+        audio, sample_rate = self.read_wave(path)
+        res=self.parse_audio(agression,audio,sample_rate,frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
+        self.chunk_time_list=[]
+        return res
+
+
     def parse_audio(self,aggression, audio,sample_rate,frame_duration_ms=30, padding_duration_ms=300):
         #audio, sample_rate = self.read_wave(path)
         vad = webrtcvad.Vad(int(aggression))
@@ -103,59 +112,120 @@ class webercvad:
             # path = 'temp_web/chunk-%002d%002d.wav' % (i,aggression)
             # print(' Writing %s' % (path,))
             # self.write_wave(path, segment, sample_rate)
-            # self.write_wave("temp_web"+os.sep+str(i)+"out.wav",segment,sample_rate)
+            #self.write_wave("temp_web"+os.sep+str(i)+"out.wav",segment,sample_rate)
             pass
 
         print('Success', len(self.chunk_time_list), 'chunks')
 
         return self.chunk_time_list
 
+    def write_wave_by_list(self,chunk_list):
+        audio, sample_rate = self.read_wave(self.current_filename)
+        for chunk in chunk_list:
+            path = 'temp_web/chunk-%002d.wav' % chunk_list.index(chunk)
+            print(' Writing %s' % (path,))
+            self.write_wave(path,audio[int(chunk[0]*sample_rate):int(chunk[1]*sample_rate)], sample_rate)
+            #self.write_wave("temp_web"+os.sep+str(i)+"out.wav",segment,sample_rate)
+
+
     def rolling_window(self,a, size):
         shape = a.shape[:-1] + (a.shape[-1] - size + 1, size)
         strides = a.strides + (a.strides[-1],)
         return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
+    def rolling_sum(self,a, n):
+        ret = np.cumsum(a, axis=0, dtype=int)
+        #ret = np.cumsum(a, axis=1, dtype=int)
+        #ret[:, n:] = ret[:, n:] - ret[:, :-n]
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:]
 
-
-    def split_by_silence_points(self,audio,sample_rate,duration_of_silence,duration,silence_level=10):
+    def find_silent_point(self,audio,sample_rate,duration_of_silence):
         """
-        Splitting audio in the mosts silent points. Work only with 2 bytes frames.
+        Find silent point. Work only with frames with size 2 bytes.
+        :param audio:audio data
+        :param sample_rate: rate of audio data
+        :param duration_of_silence:
+        :return: time of silent point
+        """
+        audio_array = np.frombuffer(audio, dtype=np.int16)
+        assert len(audio_array) == len(audio) / 2
+
+        audio_array = audio_array / (2. ** 15)
+
+        audio_array.setflags(write=1)
+        binary_array=np.ones(len(audio_array))
+        silence_level=0
+        while(sum(binary_array)>(len(binary_array)/5)):
+            silence_level+=1
+            binary_array = audio_array.copy()
+            silence_level_value = audio_array.max() * silence_level / 100
+            binary_array[np.abs(binary_array) < silence_level_value] = 0
+            binary_array[binary_array != 0] = 1
+
+        # timeArray = np.arange(0, audio_array.shape[0], 1)
+        # timeArray = (timeArray / sample_rate) * 1000
+        # fig = pyplot.figure()
+        # fig.add_subplot()
+        # pyplot.plot(timeArray, binary_array)
+        # pyplot.show()
+        len_of_seq = duration_of_silence * sample_rate
+        # len_of_seq=100
+        # sequency=np.zeros(len_of_seq)
+        # points_filter=np.all(self.rolling_window(audio_array,len_of_seq) == sequency)
+
+        # print(audio[points_filter])
+        sums_array = self.rolling_sum(binary_array, n=len_of_seq)
+        #sums_array=pd.rolling_sum(pd.S)
+        #print("sum",sums_array.min())
+        #min_v=sums_array.min()
+        #print(np.where(sums_array==min_v))
+        #return (np.where(sums_array==min_v) + len_of_seq) / sample_rate
+        return (np.argmin(sums_array) + len_of_seq) / sample_rate
+
+    def split_by_silence_points(self,audio,sample_rate,duration_of_silence,duration):
+        """
+        Splitting audio in the most silent points. Work only with 2 bytes frames.
         :param audio: audio data
         :param sample_rate: rate of audio data
         :param duration: duration after splitting
         :return: list of points to splitting
         """
-        audio_array=np.frombuffer(audio,dtype=np.int16)
-
-        audio_array = audio_array / (2. ** 15)
-
-        timeArray = np.arange(0, audio_array.shape[0], 1)
-        timeArray = (timeArray / sample_rate) * 1000
-        fig=pyplot.figure()
-        fig.add_subplot()
-        pyplot.plot(timeArray, audio_array)
-
-
-        audio_array.setflags(write=1)
-        silence_level=audio_array.max()*silence_level/100
-        assert len(audio_array)==len(audio)/2
-        audio_array[np.abs(audio_array)<silence_level]=0
-        audio_array[audio_array!=0]=1
-
-        len_of_seq=duration_of_silence*sample_rate
-        #len_of_seq=100
-        sequency=np.zeros(len_of_seq)
-        points_filter=np.all(self.rolling_window(audio_array,len_of_seq) == sequency)
-        print(audio[points_filter])
+        points=[]
+        point=self.find_silent_point(audio,sample_rate,duration_of_silence)
+        #print(point)
+        points.append([0,point])
+        #print("append",[0,point])
+        ind = int(point * sample_rate) - (int(point * sample_rate) % 2)
+        #print("coord",ind)
+        if(len(audio[ind:])/sample_rate>duration):
+            p=self.split_by_silence_points(audio[ind:],sample_rate,duration_of_silence,duration)
+            for elem in p:
+                elem[0]+=point
+                elem[1]+=point
+            points.extend(p)
+            #print("extend",p)
+            return points
+        if(len(audio[:ind])/sample_rate>duration):
+            points.extend(self.split_by_silence_points(audio[:ind], sample_rate, duration_of_silence, duration))
+            #print("extend",self.split_by_silence_points(audio[:ind], sample_rate, duration_of_silence, duration))
+            return points
+        else:
+            points.append([point, len(audio) / sample_rate])
+            #print("append", [point, len(audio) / sample_rate])
+            #print("marker final")
+        return points
 
 
     def parse_audio_with_increasing_aggression(self,start_agression,path,duration,min_legal_duration=1,frame_duration_ms=30, padding_duration_ms=300,max_agression=3):
         self.current_filename=path
         audio, sample_rate = self.read_wave(path)
         self.parse_audio(start_agression,audio,sample_rate,frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
+        #self.built_plot(name="agression1")
         # first_durations=[];
         temp_list=copy.deepcopy(self.chunk_time_list)
         temp_list[-1].append(self.max_len)
+
         # for chunk in temp_list:
         #     first_durations.append(chunk[1]-chunk[0])
         # first_mean=np.sum(first_durations) / len(temp_list)
@@ -165,6 +235,7 @@ class webercvad:
             while(i<len(temp_list)):
                 chunk=temp_list[i]
                 if((chunk[1]-chunk[0])>duration):
+                    #print(chunk,chunk[1]-chunk[0])
                     self.chunk_time_list=[]
                     new_list=self.parse_audio(aggression,audio[int(chunk[0]*sample_rate):int(chunk[1]*sample_rate)],sample_rate,frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
                     if(len(new_list)!=0):
@@ -192,16 +263,32 @@ class webercvad:
         # second_mean=np.sum(second_durations)/len(temp_list)
         #print("Means differ ",first_mean,second_mean)
 
-        # durations = []
-        # for chunk in temp_list:
-        #     durations.append(chunk[1]-chunk[0])
-        self.split_by_silence_points(audio,sample_rate,0.5,duration)
+        durations = []
+        list_betw=copy.deepcopy(temp_list)
+        for i in range(len(temp_list)):
+            chunk=temp_list[i]
+            durations.append(chunk[1]-chunk[0])
+            if((chunk[1]-chunk[0])>duration):
+                print(chunk)
+                new_chunk_array=self.split_by_silence_points(audio[int(chunk[0] * sample_rate+int((chunk[0] * sample_rate)%2)):int(chunk[1] * sample_rate)-int(int(chunk[1] * sample_rate)%2)], sample_rate, 1,
+                                           duration)
+                temp_list.remove(chunk)
+                for ch in range(len(new_chunk_array)):
+                    new_chunk_array[ch][0]+=chunk[0]
+                    new_chunk_array[ch][1]+=chunk[0]
+                    temp_list.insert(i+ch,new_chunk_array[ch])
+                    print(new_chunk_array[ch])
+
+        #self.split_by_silence_points(audio[int(268*sample_rate):int(285*sample_rate)],sample_rate,1,duration)
+        self.chunk_time_list=[]
         for chunk in temp_list:
             if(chunk[1]-chunk[0]<min_legal_duration): temp_list.remove(chunk)
         self.chunk_time_list = temp_list
         self.built_plot()
+        #print(len(temp_list), temp_list)
+        self.chunk_time_list=list_betw
+        self.built_plot(name="betw")
         pyplot.show()
-
         return temp_list
 
     def send_to_google_api(self,filename, languageCode, agressivity=1,duration=15):
@@ -233,11 +320,17 @@ class webercvad:
                 print(line[4:])
         return result
 
-    def built_plot(self,path=""):
+    def built_plot(self,path="",name=""):
         if path=="":
             path=self.current_filename
-        fig=pyplot.figure()
+
+
+        if name != "":
+            fig = pyplot.figure(name)
+        else:
+            fig=pyplot.figure()
         fig.add_subplot()
+
         #pyplot.plot()
         sample_rate,wave_data=scipy.io.wavfile.read(path)
         wave_data = wave_data / (2. ** 15)
@@ -261,7 +354,3 @@ class webercvad:
                 data_for_plotting = wave_data[chunk[0] * sample_rate:]
                 pyplot.plot(time_array_for_plot,data_for_plotting,color=c)
 
-
-
-if(__name__=="__main__"):
-    utils.utils.save_to_file("webrtc_vad.txt", webercvad.send_to_google_api("out_test.wav", "ru_RU"))
