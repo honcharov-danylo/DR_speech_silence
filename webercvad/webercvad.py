@@ -197,18 +197,18 @@ class webercvad:
         points.append([0,point])
         #print("append",[0,point])
         ind = int(point * sample_rate) - (int(point * sample_rate) % 2)
-        #print("coord",ind)
+        print("coord",ind)
         if(len(audio[ind:])/sample_rate>duration):
             p=self.split_by_silence_points(audio[ind:],sample_rate,duration_of_silence,duration)
             for elem in p:
                 elem[0]+=point
                 elem[1]+=point
             points.extend(p)
-            #print("extend",p)
+            print("extend",p)
             return points
         if(len(audio[:ind])/sample_rate>duration):
             points.extend(self.split_by_silence_points(audio[:ind], sample_rate, duration_of_silence, duration))
-            #print("extend",self.split_by_silence_points(audio[:ind], sample_rate, duration_of_silence, duration))
+            print("extend",self.split_by_silence_points(audio[:ind], sample_rate, duration_of_silence, duration))
             return points
         else:
             points.append([point, len(audio) / sample_rate])
@@ -221,16 +221,18 @@ class webercvad:
         self.current_filename=path
         audio, sample_rate = self.read_wave(path)
         self.parse_audio(start_agression,audio,sample_rate,frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
-        #self.built_plot(name="agression1")
+        self.built_plot(name="agression0")
         # first_durations=[];
         temp_list=copy.deepcopy(self.chunk_time_list)
-        temp_list[-1].append(self.max_len)
+        if(len(temp_list[-1])==1):
+            temp_list[-1].append(self.max_len)
 
         # for chunk in temp_list:
         #     first_durations.append(chunk[1]-chunk[0])
         # first_mean=np.sum(first_durations) / len(temp_list)
         #self.built_plot()
-        for aggression in range(start_agression,max_agression+1):
+        print(temp_list)
+        for aggression in range(start_agression+1,max_agression+1):
             i=0
             while(i<len(temp_list)):
                 chunk=temp_list[i]
@@ -243,7 +245,8 @@ class webercvad:
                         # if(len(new_list[-1])==1):
                         #     print(chunk)
                         #     print(new_list[-1][0]+chunk[0],"error",chunk[1]-chunk[0])
-                        new_list[-1].append(chunk[1]-chunk[0])
+                        if(len(new_list[-1])==1):
+                            new_list[-1].append(chunk[1]-chunk[0])
                         # print("old len -",(chunk[1]-chunk[0]))
                         # print("now we have ",len(new_list))
                         temp_list.remove(chunk)
@@ -252,8 +255,9 @@ class webercvad:
                             new_list[ch][0] += chunk[0]
                             new_list[ch][1] += chunk[0]
                             temp_list.insert(i+ch,new_list[ch])
+                        print("new list",chunk, new_list)
                 i+=1
-
+            print(aggression,temp_list)
         #print("\r\nAfter all splitting we have ",len(temp_list)," chunks")
         # self.built_plot()
         # pyplot.show()
