@@ -19,8 +19,8 @@ def main(path_to_file):
 
 if(__name__=="__main__"):
     #utils.utils.get_beginning_of_file("ask.wav","beginning_out_test_2.wav",180)
-    #utils.utils.change_bitrate("53147366_906.wav","new_bitrate_function_testing.wav",32000)
-    #utils.utils.get_beginning_of_file("out_test.wav","beginning_out_test.wav",180)
+    #utils.utils.change_bitrate("53147366_906.wav","beginning_out_test.wav",32000)
+    utils.utils.get_beginning_of_file("out_test.wav","beginning_out_test.wav",300)
 
   #  time_start=time.time()
     #main("beginning_out_test.wav")

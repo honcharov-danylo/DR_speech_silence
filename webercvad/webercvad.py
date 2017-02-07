@@ -169,18 +169,22 @@ class webercvad:
         # fig.add_subplot()
         # pyplot.plot(timeArray, binary_array)
         # pyplot.show()
-        len_of_seq = duration_of_silence * sample_rate
+        len_of_seq = int(duration_of_silence * sample_rate)
         # len_of_seq=100
         # sequency=np.zeros(len_of_seq)
         # points_filter=np.all(self.rolling_window(audio_array,len_of_seq) == sequency)
 
         # print(audio[points_filter])
         sums_array = self.rolling_sum(binary_array, n=len_of_seq)
-        if(duration_of_silence>=0.01):
-            return self.find_silent_point(audio[int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2):int((np.argmin(sums_array) + len_of_seq)*2)-int(int((np.argmin(sums_array) + len_of_seq)*2)%2)],sample_rate,duration_of_silence=duration_of_silence*0.9)
+        #print("sum", sums_array.min())
+        #print("argmin", np.argmin(sums_array))
+
+        #print(duration_of_silence)
+        #print(int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2),int(int((np.argmin(sums_array) + len_of_seq)*2))-int(int((np.argmin(sums_array) + len_of_seq)*2)%2))
+        # if(duration_of_silence!=0.7):
+        #     return self.find_silent_point(audio[int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2):int((np.argmin(sums_array) + len_of_seq)*2)-int(int((np.argmin(sums_array) + len_of_seq)*2)%2)],sample_rate,duration_of_silence=0.7)
         #sums_array=pd.rolling_sum(pd.S)
-        print("sum",sums_array.min())
-        min_v=sums_array.min()
+        #min_v=sums_array.min()
         #print(np.where(sums_array==min_v))
         #return (np.where(sums_array==min_v) + len_of_seq) / sample_rate
         #return (audio_array[np.argmin(sums_array):np.argmin(sums_array)+len_of_seq].argmin()) / sample_rate
@@ -274,8 +278,8 @@ class webercvad:
                 i+=1
         #    print(aggression,temp_list)
         #print("\r\nAfter all splitting we have ",len(temp_list)," chunks")
-        # self.built_plot()
-        # pyplot.show()
+        #self.built_plot()
+        #pyplot.show()
         # second_durations=[]
         # for chunk in temp_list:
         #     second_durations.append(chunk[1]-chunk[0])
@@ -330,7 +334,7 @@ class webercvad:
         result = []
         for speech in labels:
             if (len(speech) != 1):
-                current_sound = wave_data[speech[0] * rate:speech[1] * rate]
+                current_sound = wave_data[int(speech[0] * rate):int(speech[1] * rate)]
             else:
                 current_sound = wave_data[speech[0]:]
             google_res = aw.send_data(current_sound, rate, languageCode=languageCode)
@@ -342,6 +346,13 @@ class webercvad:
                 result.append(line[4:])
                 print(line[4:])
         return result
+
+    def get_durations_list(self):
+        durations_list=self.chunk_time_list
+        for d in durations_list:
+            d[1]=d[1]-d[0]
+        return durations_list
+
 
     def built_plot(self,path="",name=""):
         if path=="":
@@ -368,12 +379,12 @@ class webercvad:
         for chunk in self.chunk_time_list:
             c = next(color)
             if(len(chunk)!=1):
-                data_for_plotting = wave_data[chunk[0] * sample_rate:chunk[1] * sample_rate]
-                time_array_for_plot=timeArray[chunk[0] * sample_rate:chunk[1] * sample_rate]
+                data_for_plotting = wave_data[int(chunk[0] * sample_rate):int(chunk[1] * sample_rate)]
+                time_array_for_plot=timeArray[int(chunk[0] * sample_rate):int(chunk[1] * sample_rate)]
 
                 pyplot.plot(time_array_for_plot,data_for_plotting,color=c)
             else:
-                time_array_for_plot=timeArray[chunk[0] * sample_rate:]
-                data_for_plotting = wave_data[chunk[0] * sample_rate:]
+                time_array_for_plot=timeArray[int(chunk[0] * sample_rate):]
+                data_for_plotting = wave_data[int(chunk[0] * sample_rate):]
                 pyplot.plot(time_array_for_plot,data_for_plotting,color=c)
 
