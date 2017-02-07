@@ -176,11 +176,14 @@ class webercvad:
 
         # print(audio[points_filter])
         sums_array = self.rolling_sum(binary_array, n=len_of_seq)
+        # if(duration_of_silence>=0.01):
+        #     return self.find_silent_point(audio[int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2):int((np.argmin(sums_array) + len_of_seq)*2)-int(int((np.argmin(sums_array) + len_of_seq)*2)%2)],sample_rate,duration_of_silence=duration_of_silence*0.9)
         #sums_array=pd.rolling_sum(pd.S)
         #print("sum",sums_array.min())
         #min_v=sums_array.min()
         #print(np.where(sums_array==min_v))
         #return (np.where(sums_array==min_v) + len_of_seq) / sample_rate
+        #return (audio_array[np.argmin(sums_array):np.argmin(sums_array)+len_of_seq].argmin()) / sample_rate
         return (np.argmin(sums_array) + len_of_seq) / sample_rate
 
     def split_by_silence_points(self,audio,sample_rate,duration_of_silence,duration):
@@ -217,11 +220,22 @@ class webercvad:
         return points
 
 
-    def parse_audio_with_increasing_aggression(self,start_agression,path,duration,min_legal_duration=1,frame_duration_ms=30, padding_duration_ms=300,max_agression=3):
+    def parse_audio_with_increasing_aggression(self, start_aggression, path, duration, min_legal_duration=1, frame_duration_ms=30, padding_duration_ms=300, max_agression=3):
+        """
+
+        :param start_aggression:
+        :param path:
+        :param duration:
+        :param min_legal_duration:
+        :param frame_duration_ms:
+        :param padding_duration_ms:
+        :param max_agression:
+        :return:
+        """
         self.current_filename=path
         audio, sample_rate = self.read_wave(path)
-        self.parse_audio(start_agression,audio,sample_rate,frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
-        self.built_plot(name="agression0")
+        self.parse_audio(start_aggression, audio, sample_rate, frame_duration_ms=frame_duration_ms, padding_duration_ms=padding_duration_ms)
+        #self.built_plot(name="agression0")
         # first_durations=[];
         temp_list=copy.deepcopy(self.chunk_time_list)
         if(len(temp_list[-1])==1):
@@ -232,7 +246,7 @@ class webercvad:
         # first_mean=np.sum(first_durations) / len(temp_list)
         #self.built_plot()
         print(temp_list)
-        for aggression in range(start_agression+1,max_agression+1):
+        for aggression in range(start_aggression+1, max_agression+1):
             i=0
             while(i<len(temp_list)):
                 chunk=temp_list[i]
@@ -256,6 +270,7 @@ class webercvad:
                             new_list[ch][1] += chunk[0]
                             temp_list.insert(i+ch,new_list[ch])
                         print("new list",chunk, new_list)
+                        #i+=len(new_list)-1
                 i+=1
             print(aggression,temp_list)
         #print("\r\nAfter all splitting we have ",len(temp_list)," chunks")
@@ -283,16 +298,19 @@ class webercvad:
                     temp_list.insert(i+ch,new_chunk_array[ch])
                     print(new_chunk_array[ch])
 
+
         #self.split_by_silence_points(audio[int(268*sample_rate):int(285*sample_rate)],sample_rate,1,duration)
         self.chunk_time_list=[]
         for chunk in temp_list:
             if(chunk[1]-chunk[0]<min_legal_duration): temp_list.remove(chunk)
         self.chunk_time_list = temp_list
-        self.built_plot()
+
+        #self.built_plot()
+
         #print(len(temp_list), temp_list)
         self.chunk_time_list=list_betw
-        self.built_plot(name="betw")
-        pyplot.show()
+        #self.built_plot(name="betw")
+        #pyplot.show()
         return temp_list
 
     def send_to_google_api(self,filename, languageCode, agressivity=1,duration=15):
@@ -307,6 +325,7 @@ class webercvad:
         self.max_len=len(wave_data)/rate
         #labels = self.parse_audio(agressivity, filename)
         labels=self.parse_audio_with_increasing_aggression(agressivity,filename,duration)
+        #return []
         aw = api_wrapper.api_wrapper()
         result = []
         for speech in labels:
@@ -330,9 +349,9 @@ class webercvad:
 
 
         if name != "":
-            fig = pyplot.figure(name)
+            fig = pyplot.figure(name,figsize=(10,5))
         else:
-            fig=pyplot.figure()
+            fig=pyplot.figure(figsize=(10,5))
         fig.add_subplot()
 
         #pyplot.plot()
