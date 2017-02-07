@@ -1,4 +1,4 @@
-import sox
+#import sox
 import shutil
 import os
 import glob
@@ -9,6 +9,8 @@ import matplotlib.pyplot as pyplot
 import scipy.io.wavfile
 from matplotlib.pyplot import cm
 import numpy as np
+import subprocess
+from utils.utils import *
 
 class sox_splitter:
     def __init__(self):
@@ -16,7 +18,7 @@ class sox_splitter:
         self.ordered_files=[]
         self.current_filename=""
 
-    def split_file_by_silence(self,path,max_duration=20,threshold=1):
+    def split_file_by_silence(self,path,max_duration=15,threshold=1):
         """
         :param path: path to input file
         :param max_duration: max duration of file which not be splitted
@@ -32,11 +34,12 @@ class sox_splitter:
         self.ordered_files.append("temp" + os.sep + "audio" + file_extension)
         return self.__split_file_by_silence("temp"+os.sep+"audio"+file_extension,max_duration,threshold)
 
-    def __split_file_by_silence(self,path,max_duration,threshold=0.1):
+    def __split_file_by_silence(self,path,max_duration,threshold=1):
         #sox.core.sox([path, "temp"+os.sep+str(threshold)+"out.wav","silence","1","0.5","1%","1","5.0",str(threshold)+"%",":","newfile",":","restart"])
-        sox.core.sox([path, "temp" + os.sep + str(threshold) + "out.wav", "silence","-l", "0", "0.5", "5.0",
-                      str(threshold) + "%", ":", "newfile", ":", "restart"])
-
+        # sox.core.sox([path, "temp" + os.sep + str(threshold) + "out.wav", "silence","-l", "0", "0.5", "5.0",
+        #               str(threshold) + "%", ":", "newfile", ":", "restart"])
+        subprocess.call(["sox",path, "temp" + os.sep + str(threshold) + "out.wav", "silence","-l", "0", "0.5", "5.0",
+                        str(threshold) + "%", ":", "newfile", ":", "restart"])
         os.remove(path)
 
         #statistics
@@ -51,7 +54,8 @@ class sox_splitter:
         files=os.listdir("temp")
         for file in files:
             if (os.path.exists("temp" + os.sep + file)):
-                if (sox.file_info.duration("temp" + os.sep + file) > max_duration):
+                #if (sox.file_info.duration("temp" + os.sep + file) > max_duration):
+                if (get_duration("temp" + os.sep + file) > max_duration):
                     self.__split_file_by_silence("temp" + os.sep + file, max_duration, threshold + 1)
         return self.ordered_files
 
@@ -59,7 +63,7 @@ class sox_splitter:
         cumsum=0
         points={}
         for file in self.ordered_files:
-            cumsum+=sox.file_info.duration(file)
+            cumsum+=get_duration(file)
             name=os.path.basename(file)
             points[cumsum]=int(name[0:name.find("out")])
         print(points)
@@ -75,8 +79,11 @@ class sox_splitter:
         files = self.split_file_by_silence(filename)
         print(self.ordered_files)
         # utils.analysis.plot(path_to_file,ss.get_points())
-        self.built_plot()
-        pyplot.show()
+
+        #self.built_plot()
+
+        #pyplot.show()
+        #return []
         aw = api_wrapper.api_wrapper.api_wrapper()
         result=[]
         for file in files:
@@ -95,7 +102,7 @@ class sox_splitter:
 
 
         if name != "":
-            fig = pyplot.figure(name)
+            fig = pyplot.figure(name,figsize=(10,5))
         else:
             fig=pyplot.figure(figsize=(10,5))
         fig.add_subplot()
@@ -110,11 +117,16 @@ class sox_splitter:
         points = self.get_points()
         chunk_time_list = []
         chunk_time_list.append([0, list(points.keys())[0]])
-        for p in points:
+        p_keys=list(points.keys())
+        for i in range(len(p_keys)):
             try:
-                chunk_time_list.append([p, points[list(points.keys()).index(p) + 1]])
+                chunk_time_list.append([p_keys[i],p_keys[i+1]])
             except:
-                chunk_time_list.append([p,len(wave_data)/sample_rate])
+                chunk_time_list.append([p_keys[i],len(wave_data)/sample_rate])
+            # try:
+            #     chunk_time_list.append([p, points[list(points.keys())[list(points.keys()).index(p) + 1]]])
+            # except:
+            #     chunk_time_list.append([p,)
 
 
         pyplot.plot(timeArray, wave_data,color='red')
@@ -122,8 +134,11 @@ class sox_splitter:
         np.random.shuffle(rainb)
         color = iter(rainb)
 
+        durations=[]
 
+        print(chunk_time_list)
         for chunk in chunk_time_list:
+            durations.append(chunk[1]-chunk[0])
             c = next(color)
             if(len(chunk)!=1):
                 data_for_plotting = wave_data[chunk[0] * sample_rate:chunk[1] * sample_rate]
@@ -137,3 +152,6 @@ class sox_splitter:
 
         for p in points:
             pyplot.text(p*1000,0,points[p],color='black')
+
+        #print(durations)
+        print("avg duration",sum(durations)/len(durations))

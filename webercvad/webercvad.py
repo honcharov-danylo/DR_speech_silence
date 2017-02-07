@@ -115,7 +115,7 @@ class webercvad:
             #self.write_wave("temp_web"+os.sep+str(i)+"out.wav",segment,sample_rate)
             pass
 
-        print('Success', len(self.chunk_time_list), 'chunks')
+        #print('Success', len(self.chunk_time_list), 'chunks')
 
         return self.chunk_time_list
 
@@ -176,11 +176,11 @@ class webercvad:
 
         # print(audio[points_filter])
         sums_array = self.rolling_sum(binary_array, n=len_of_seq)
-        # if(duration_of_silence>=0.01):
-        #     return self.find_silent_point(audio[int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2):int((np.argmin(sums_array) + len_of_seq)*2)-int(int((np.argmin(sums_array) + len_of_seq)*2)%2)],sample_rate,duration_of_silence=duration_of_silence*0.9)
+        if(duration_of_silence>=0.01):
+            return self.find_silent_point(audio[int(np.argmin(sums_array)*2)-(int(np.argmin(sums_array)*2)%2):int((np.argmin(sums_array) + len_of_seq)*2)-int(int((np.argmin(sums_array) + len_of_seq)*2)%2)],sample_rate,duration_of_silence=duration_of_silence*0.9)
         #sums_array=pd.rolling_sum(pd.S)
-        #print("sum",sums_array.min())
-        #min_v=sums_array.min()
+        print("sum",sums_array.min())
+        min_v=sums_array.min()
         #print(np.where(sums_array==min_v))
         #return (np.where(sums_array==min_v) + len_of_seq) / sample_rate
         #return (audio_array[np.argmin(sums_array):np.argmin(sums_array)+len_of_seq].argmin()) / sample_rate
@@ -245,7 +245,7 @@ class webercvad:
         #     first_durations.append(chunk[1]-chunk[0])
         # first_mean=np.sum(first_durations) / len(temp_list)
         #self.built_plot()
-        print(temp_list)
+        #print(temp_list)
         for aggression in range(start_aggression+1, max_agression+1):
             i=0
             while(i<len(temp_list)):
@@ -269,10 +269,10 @@ class webercvad:
                             new_list[ch][0] += chunk[0]
                             new_list[ch][1] += chunk[0]
                             temp_list.insert(i+ch,new_list[ch])
-                        print("new list",chunk, new_list)
+                        #print("new list",chunk, new_list)
                         #i+=len(new_list)-1
                 i+=1
-            print(aggression,temp_list)
+        #    print(aggression,temp_list)
         #print("\r\nAfter all splitting we have ",len(temp_list)," chunks")
         # self.built_plot()
         # pyplot.show()
@@ -305,12 +305,12 @@ class webercvad:
             if(chunk[1]-chunk[0]<min_legal_duration): temp_list.remove(chunk)
         self.chunk_time_list = temp_list
 
-        #self.built_plot()
+        self.built_plot()
 
         #print(len(temp_list), temp_list)
         self.chunk_time_list=list_betw
         #self.built_plot(name="betw")
-        #pyplot.show()
+        pyplot.show()
         return temp_list
 
     def send_to_google_api(self,filename, languageCode, agressivity=1,duration=15):
